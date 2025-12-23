@@ -1,6 +1,5 @@
 package org.example
 
-import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -30,7 +29,7 @@ class ElevatorUseCase(val scope: CoroutineScope) {
                 val line = _elevators.value.joinToString(separator = " | ") { elevator ->
                     "Elevator-${elevator.id}: ${elevator.stateDisplayText()}-${elevator.level}"
                 }
-                Log.e("Elevator", line)
+                println(line)
             }
         }
     }
@@ -39,7 +38,7 @@ class ElevatorUseCase(val scope: CoroutineScope) {
 
         val elevator =
             elevators.value.filter { !it.isMoving }.minByOrNull { it.level - currentLevelOfUser }
-        Log.e("Elevator", "Assigned Elevator: ${elevator?.id}")
+        println("Assigned Elevator: ${elevator?.id}")
         elevator?.let {
             if (currentLevelOfUser == elevator.level) {
                 assignElevator(whereToGo, it)
