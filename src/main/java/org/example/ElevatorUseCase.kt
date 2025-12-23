@@ -61,10 +61,10 @@ class ElevatorUseCase(
     }
 
     fun handleInput(whereToGo: Int) {
-
         val elevator =
             elevators.value.filter { !it.isMoving }.minByOrNull { it.level - currentLevelOfUser }
         println("Assigned Elevator: ${elevator?.id}")
+
         elevator?.let {
             if (currentLevelOfUser == elevator.level) {
                 assignElevator(whereToGo, it)
@@ -85,7 +85,7 @@ class ElevatorUseCase(
                 currentLevel += 1
                 _elevators.value = _elevators.value.map {
                     if (it.id == elevator.id) it.copy(
-                        state = ElevatorState.MOVING, level = currentLevel
+                        state = ElevatorState.MOVING, level = currentLevel, direction = DIRECTION.UP
                     ) else it
                 }
                 delay(1000)
@@ -106,7 +106,9 @@ class ElevatorUseCase(
                 currentLevel -= 1
                 _elevators.value = _elevators.value.map {
                     if (it.id == elevator.id) it.copy(
-                        state = ElevatorState.MOVING, level = currentLevel
+                        state = ElevatorState.MOVING,
+                        level = currentLevel,
+                        direction = DIRECTION.DOWN
                     ) else it
                 }
                 delay(1000)

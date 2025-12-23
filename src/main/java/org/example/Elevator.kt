@@ -25,5 +25,15 @@ data class Elevator(
             }
         }
 
+    var isGoingUp: Boolean
+        get() = direction == DIRECTION.UP
+        set(value) {
+            direction = if (value) {
+                DIRECTION.UP
+            } else {
+                DIRECTION.DOWN
+            }
+        }
+
     fun stateDisplayText() = state.displayText
 }
