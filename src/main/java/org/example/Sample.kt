@@ -16,7 +16,7 @@ fun main() = runBlocking {
 private fun checkForInput(scope: CoroutineScope, elevatorUseCase: ElevatorUseCase) {
     scope.launch(Dispatchers.IO) {
         while (isActive) {
-            println("Enter command: ")
+            println("Enter input: ")
             val input = readlnOrNull() ?: continue
             input.toIntOrNull()?.let { whereToGo ->
                 elevatorUseCase.handleInput(whereToGo)
