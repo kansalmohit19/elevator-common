@@ -1,18 +1,23 @@
 package org.example
 
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class ElevatorUseCase(val scope: CoroutineScope) {
-    val elevatorCount = 1
+    val elevatorCount = 4
     val levels = 10
     val currentLevelOfUser = 0
-    val elevators = mutableListOf<ElevatorState>()
+    private val _elevators = MutableStateFlow<List<Elevator>>(emptyList())
+    val elevators = _elevators.asStateFlow()
 
     init {
         repeat(elevatorCount) { index ->
-            elevators.add(ElevatorState(index + 1))
+            _elevators.value += Elevator(id = index + 1, displayName = "A")
         }
 
         printElevatorState()
@@ -22,46 +27,70 @@ class ElevatorUseCase(val scope: CoroutineScope) {
         scope.launch {
             while (true) {
                 delay(1000)
-                val line = elevators.joinToString(separator = " | ") { elevator ->
-                    "Elevator-${elevator.id}: ${if (elevator.isMoving) "MOVING" else "IDLE"}-${elevator.level}"
+                val line = _elevators.value.joinToString(separator = " | ") { elevator ->
+                    "Elevator-${elevator.id}: ${elevator.stateDisplayText()}-${elevator.level}"
                 }
-                println(line)
+                Log.e("Elevator", line)
             }
         }
     }
 
-    suspend fun handleInput(whereToGo: Int) {
-        val elevatorState = elevators.filter { !it.isMoving }.minByOrNull { it.level - currentLevelOfUser }
-        println("Idle Elevator: ${elevatorState?.id}")
-        elevatorState?.let {
-            if (currentLevelOfUser == elevatorState.level) {
+    fun handleInput(whereToGo: Int) {
+
+        val elevator =
+            elevators.value.filter { !it.isMoving }.minByOrNull { it.level - currentLevelOfUser }
+        Log.e("Elevator", "Assigned Elevator: ${elevator?.id}")
+        elevator?.let {
+            if (currentLevelOfUser == elevator.level) {
                 assignElevator(whereToGo, it)
-            } else if (currentLevelOfUser < elevatorState.level) {
-                bringElevator(currentLevelOfUser, it)
-                assignElevator(whereToGo, it)
+            } else if (currentLevelOfUser < elevator.level) {
+                scope.launch {
+                    bringElevator(currentLevelOfUser, it).join()
+                    assignElevator(whereToGo, it)
+                }
             }
         }
     }
 
-    fun assignElevator(whereToGo: Int, elevator: ElevatorState) {
+    fun assignElevator(whereToGo: Int, elevator: Elevator) {
         scope.launch {
-            while (elevator.level < whereToGo) {
-                elevator.isMoving = true
-                delay(2000)
-                elevator.level++
+            var currentLevel = _elevators.value.first { it.id == elevator.id }.level
+
+            while (currentLevel < whereToGo) {
+                currentLevel += 1
+                _elevators.value = _elevators.value.map {
+                    if (it.id == elevator.id) it.copy(
+                        state = ElevatorState.MOVING, level = currentLevel
+                    ) else it
+                }
+                delay(1000)
             }
-            elevator.isMoving = false
+            _elevators.value = _elevators.value.map {
+                if (it.id == elevator.id) it.copy(
+                    state = ElevatorState.IDLE
+                ) else it
+            }
         }
     }
 
-    suspend fun bringElevator(whereToGo: Int, elevator: ElevatorState) {
-        scope.launch {
-            while (elevator.level > whereToGo) {
-                elevator.isMoving = true
-                delay(2000)
-                elevator.level--
+    fun bringElevator(whereToGo: Int, elevator: Elevator): Job {
+        return scope.launch {
+            var currentLevel = _elevators.value.first { it.id == elevator.id }.level
+
+            while (currentLevel > whereToGo) {
+                currentLevel -= 1
+                _elevators.value = _elevators.value.map {
+                    if (it.id == elevator.id) it.copy(
+                        state = ElevatorState.MOVING, level = currentLevel
+                    ) else it
+                }
+                delay(1000)
             }
-            elevator.isMoving = false
-        }.join()
+            _elevators.value = _elevators.value.map {
+                if (it.id == elevator.id) it.copy(
+                    state = ElevatorState.IDLE
+                ) else it
+            }
+        }
     }
 }
